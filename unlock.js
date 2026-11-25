@@ -6,7 +6,7 @@ const blobURLs=[];
 const b64=bytes=>{let result='';for(let n=0;n<bytes.length;n+=16384)result+=String.fromCharCode(...bytes.subarray(n,n+16384));return btoa(result);};
 const fromB64=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
 function storageShape(value){return value&&Object.getPrototypeOf(value)===Object.prototype&&Object.keys(value).length<=50&&Object.entries(value).every(([k,v])=>/^beichen-[\w-]{1,100}$/.test(k)&&typeof v==='string')&&JSON.stringify(value).length<=3000000;}
-function error(text){heading.textContent='暂时无法打开';message.textContent=text;progress.hidden=true;}
+function error(text){heading.textContent='暂时无法打开';message.textContent=text;progress.hidden=true;$('#access-entry').hidden=false;$('#unlock-button').disabled=false;}
 async function restore(){
   try{const stored=localStorage.getItem(storageId);if(!stored)return {};
     const restored=JSON.parse(decode.decode(await unseal(fromB64(stored),key,STORAGE_AAD)));
@@ -36,13 +36,13 @@ function bridgeScript(initial,assets){
 }
 async function open(){
   const token=new URLSearchParams(location.hash.slice(1)).get('k');
-  if(!token){heading.textContent='需要完整分享链接';message.textContent='这个普通网址不能查看内容，请向分享者索取完整链接。';return;}
+  if(!token){heading.textContent='输入访问码打开空间';message.textContent='如果聊天软件截断了链接，请在下方粘贴分享者发来的访问码，也可以粘贴完整链接。';return;}
   if(!crypto.subtle||!globalThis.DecompressionStream){error('请用新版 Safari、Chrome 或 Edge 打开完整链接。');return;}
   try{
     const raw=decodeKey(token);key=await importKey(raw);
     const fingerprint=new Uint8Array(await crypto.subtle.digest('SHA-256',raw));raw.fill(0);
     storageId='private-space-encrypted-'+Array.from(fingerprint.slice(0,16),n=>n.toString(16).padStart(2,'0')).join('');
-    progress.hidden=false;heading.textContent='正在打开空间';message.textContent='首次打开需要下载模型和材质，请稍候。';
+    $('#access-entry').hidden=true;progress.hidden=false;heading.textContent='正在打开空间';message.textContent='首次打开需要下载约 30 MB 模型和材质，请稍候。';
     const infoResponse=await fetch('./payload.json',{cache:'no-store',referrerPolicy:'no-referrer'});if(!infoResponse.ok)throw new Error('download');
     const info=await infoResponse.json();
     if(!/^pack-[a-f0-9]{16}\.bin$/.test(info.file)||!Number.isSafeInteger(info.bytes)||info.bytes>100*1024*1024)throw new Error('download');
@@ -67,5 +67,21 @@ async function open(){
   }catch(e){key=null;error(e.message==='download'?'下载未完成，请检查网络后刷新。':'链接不完整、访问钥匙不匹配，或文件已损坏。请重新获取完整链接。');}
 }
 $('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(shareURL);$('#copy-link').textContent='已复制，请谨慎转发';}catch{$('#copy-link').textContent='请复制地址栏完整链接';}};
-$('#lock').onclick=async()=>{await saveQueue;frame?.remove();frame=null;for(const url of blobURLs)URL.revokeObjectURL(url);blobURLs.length=0;key=null;shareURL='';history.replaceState(null,'',location.pathname);bar.hidden=true;gate.hidden=false;progress.hidden=true;heading.textContent='空间已锁定';message.textContent='再次查看请重新打开完整分享链接。';document.title='私密空间分享';};
+function accessToken(value){
+  const input=String(value).trim();
+  const token=input.includes('#')?new URLSearchParams(input.slice(input.indexOf('#')+1)).get('k'):input;
+  decodeKey(token);
+  return token;
+}
+$('#unlock-button').onclick=async()=>{
+  if($('#unlock-button').disabled)return;
+  try{
+    const token=accessToken($('#access-code').value);
+    history.replaceState(null,'',location.pathname+location.search+'#k='+token);
+    shareURL=location.href;$('#access-code').value='';$('#unlock-button').disabled=true;
+    await open();
+  }catch{error('访问码不完整，请完整复制访问码或分享链接后重试。');}
+};
+$('#access-code').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();$('#unlock-button').onclick();}};
+$('#lock').onclick=async()=>{await saveQueue;frame?.remove();frame=null;for(const url of blobURLs)URL.revokeObjectURL(url);blobURLs.length=0;key=null;shareURL='';history.replaceState(null,'',location.pathname);bar.hidden=true;gate.hidden=false;progress.hidden=true;$('#access-entry').hidden=false;$('#unlock-button').disabled=false;heading.textContent='空间已锁定';message.textContent='再次查看请重新输入访问码或打开完整分享链接。';document.title='私密空间分享';};
 open();

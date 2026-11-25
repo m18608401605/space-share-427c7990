@@ -8,7 +8,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' blob: 'unsafe-inline'; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self' blob:; frame-src 'self' blob:; worker-src blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="theme-color" content="#f7f5ef">
 <title>私密空间分享</title>
-<link rel="stylesheet" href="./shell.css">
+<link rel="stylesheet" href="./shell.css?v=20261125-access">
 </head>
 <body>
 <main id="gate">
@@ -16,6 +16,11 @@
   <p class="eyebrow">SHARED SPACE</p>
   <h1 id="heading">私密空间分享</h1>
   <p id="message">请使用分享者发给你的完整链接打开。</p>
+  <div id="access-entry">
+    <label for="access-code">访问码或完整分享链接</label>
+    <input id="access-code" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴分享者发来的访问码">
+    <button id="unlock-button" type="button">解锁空间</button>
+  </div>
   <progress id="progress" hidden aria-label="加载进度"></progress>
   <p class="note" id="note">完整链接包含访问钥匙。请只转发给你信任的人。</p>
 </main>
@@ -24,5 +29,5 @@
   <button id="copy-link" type="button">复制分享链接</button>
   <button id="lock" type="button">锁定</button>
 </div>
-<script type="module" src="./unlock.js"></script>
+<script type="module" src="./unlock.js?v=20261125-access"></script>
 </body></html>
